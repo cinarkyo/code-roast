@@ -27,6 +27,8 @@ Limits: names can be up to 30 characters, code up to 4000 characters, and the tw
 
 ## Run locally
 
+Just want to play? Use the live demo above. These steps are for running the code on your own machine.
+
 You need Node.js, the [Vercel CLI](https://vercel.com/docs/cli) and a [Groq API key](https://console.groq.com/keys).
 
 1. Clone the repository and install the dependencies:
