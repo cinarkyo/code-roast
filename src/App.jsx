@@ -1,121 +1,82 @@
 import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
+import CodePanel from './components/CodePanel'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [name1, setName1] = useState('')
+  const [code1, setCode1] = useState('')
+  const [name2, setName2] = useState('')
+  const [code2, setCode2] = useState('')
+
+  const isFormValid =
+    name1.trim().length > 0 &&
+    code1.trim().length > 0 &&
+    name2.trim().length > 0 &&
+    code2.trim().length > 0
+
+  const handleRoast = (e) => {
+    e.preventDefault()
+    if (!isFormValid) return
+
+    console.log({
+      name1: name1.trim(),
+      code1,
+      name2: name2.trim(),
+      code2,
+    })
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="app-container">
+      <header className="app-header">
+        <div className="badge-tag">GIT BLAME ROULETTE</div>
+        <h1 className="app-title">Code Roast 🔥</h1>
+        <p className="app-slogan">Paste your code. Get destroyed.</p>
+      </header>
 
-      <div className="ticks"></div>
+      <main className="arena-main">
+        <form className="roast-form" onSubmit={handleRoast}>
+          <div className="panels-grid">
+            <CodePanel
+              playerNumber={1}
+              name={name1}
+              onNameChange={setName1}
+              code={code1}
+              onCodeChange={setCode1}
+              namePlaceholder="Player 1"
+              codePlaceholder="Paste your code here..."
+            />
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+            <div className="vs-divider" aria-hidden="true">
+              <span className="vs-badge">VS</span>
+            </div>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+            <CodePanel
+              playerNumber={2}
+              name={name2}
+              onNameChange={setName2}
+              code={code2}
+              onCodeChange={setCode2}
+              namePlaceholder="Player 2"
+              codePlaceholder="Paste your code here..."
+            />
+          </div>
+
+          <div className="action-area">
+            <button
+              type="submit"
+              className="roast-button"
+              disabled={!isFormValid}
+            >
+              Roast &apos;em 🔥
+            </button>
+            <p className="security-warning">
+              Don&apos;t paste secrets or API keys.
+            </p>
+          </div>
+        </form>
+      </main>
+    </div>
   )
 }
 
