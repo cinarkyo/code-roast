@@ -1,4 +1,8 @@
+import { useEffect, useRef, useState } from 'react'
 import './ResultView.css'
+
+const COPY_LABEL_MS = 2000
+const COPY_IDLE_LABEL = 'Copy result'
 
 function ResultCard({ name, roast, isLoser }) {
   return (
@@ -13,8 +17,35 @@ function ResultCard({ name, roast, isLoser }) {
 }
 
 function ResultView({ result, name1, name2, onReset }) {
+  const [copyLabel, setCopyLabel] = useState(COPY_IDLE_LABEL)
+  const copyTimer = useRef(null)
+
+  useEffect(() => () => clearTimeout(copyTimer.current), [])
+
   // The API returns the loser's name, so exactly one card must be derived from it.
   const isFirstLoser = result.loser.trim() === name1.trim()
+
+  const showCopyLabel = (label) => {
+    setCopyLabel(label)
+    clearTimeout(copyTimer.current)
+    copyTimer.current = setTimeout(() => setCopyLabel(COPY_IDLE_LABEL), COPY_LABEL_MS)
+  }
+
+  const handleCopy = async () => {
+    const summary = [
+      `Code Roast 🔥 ${name1} vs ${name2}`,
+      `Loser: ${result.loser}`,
+      result.verdict,
+      window.location.origin,
+    ].join('\n')
+
+    try {
+      await navigator.clipboard.writeText(summary)
+      showCopyLabel('Copied!')
+    } catch {
+      showCopyLabel('Copy failed')
+    }
+  }
 
   return (
     <section className="result-view" aria-label="Roast result">
@@ -25,9 +56,14 @@ function ResultView({ result, name1, name2, onReset }) {
 
       <p className="result-verdict">{result.verdict}</p>
 
-      <button type="button" className="result-reset" onClick={onReset}>
-        Roast again
-      </button>
+      <div className="result-actions">
+        <button type="button" className="result-copy" aria-live="polite" onClick={handleCopy}>
+          {copyLabel}
+        </button>
+        <button type="button" className="result-reset" onClick={onReset}>
+          Roast again
+        </button>
+      </div>
     </section>
   )
 }
