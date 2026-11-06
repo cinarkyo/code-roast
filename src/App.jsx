@@ -1,7 +1,26 @@
 import { useState, useEffect } from 'react'
 import CodePanel from './components/CodePanel'
 import MatchSettings from './components/MatchSettings'
+import ResultView from './components/ResultView'
+import { roastCode } from './services/roastClient'
 import './App.css'
+
+const TIME_EXPIRED_CODE = '// Time expired before writing any code!'
+
+const LOADING_MESSAGES = [
+  'Reading your spaghetti…',
+  'Counting your nested ifs…',
+  'Questioning your variable names…',
+  'Checking git blame for who hurt you…',
+  'Consulting burned-out senior architects…',
+  'Measuring cyclomatic complexity…',
+  'Searching Stack Overflow for where you copied this…',
+  'Preparing emotional damage…',
+]
+
+function normalizeName(name) {
+  return name.trim().toLowerCase().replace(/\u0307/g, '').replace(/ı/g, 'i')
+}
 
 function App() {
   const [name1, setName1] = useState('')
@@ -16,6 +35,17 @@ function App() {
   const [timerDuration, setTimerDuration] = useState(0)
   const [timeLeft, setTimeLeft] = useState(null)
   const [timerRunning, setTimerRunning] = useState(false)
+
+  // API & UI states
+  const [isLoading, setIsLoading] = useState(false)
+  const [loadingMsgIndex, setLoadingMsgIndex] = useState(0)
+  const [error, setError] = useState(null)
+  const [result, setResult] = useState(null)
+
+  const hasDuplicateNames =
+    name1.trim().length > 0 &&
+    name2.trim().length > 0 &&
+    normalizeName(name1) === normalizeName(name2)
 
   const isMatchStarted =
     currentTurn !== 1 ||
@@ -41,6 +71,7 @@ function App() {
   const handleName1Change = (val) => {
     startTimerIfNeeded()
     setName1(val)
+    if (error) setError(null)
   }
 
   const handleCode1Change = (val) => {
@@ -51,6 +82,7 @@ function App() {
   const handleName2Change = (val) => {
     startTimerIfNeeded()
     setName2(val)
+    if (error) setError(null)
   }
 
   const handleCode2Change = (val) => {
@@ -61,7 +93,7 @@ function App() {
   const handleLockPlayer1 = () => {
     if (!name1.trim()) setName1('Player 1')
     if (!code1.trim()) {
-      setCode1('// Time expired before writing any code!')
+      setCode1(TIME_EXPIRED_CODE)
     }
     setTimerRunning(false)
     setCurrentTurn(2)
@@ -69,10 +101,25 @@ function App() {
   }
 
   const handleLockPlayer2 = () => {
-    if (!name2.trim()) setName2('Player 2')
-    if (!code2.trim()) {
-      setCode2('// Time expired before writing any code!')
+    const finalName1 = name1.trim() || 'Player 1'
+    let finalName2 = name2.trim() || 'Player 2'
+
+    // If user explicitly typed the exact same name as Dev 1, block lock-in and show error
+    if (name2.trim() && normalizeName(finalName1) === normalizeName(finalName2)) {
+      setError('Developer names must be different. Please pick another name.')
+      return
     }
+
+    // If fallback default 'Player 2' collided because Dev 1 named themselves 'Player 2'
+    if (!name2.trim() && normalizeName(finalName1) === normalizeName(finalName2)) {
+      finalName2 = 'Player 2 (Challenger)'
+    }
+
+    setName2(finalName2)
+    if (!code2.trim()) {
+      setCode2(TIME_EXPIRED_CODE)
+    }
+    setError(null)
     setTimerRunning(false)
     setCurrentTurn('ready')
     setTimeLeft(null)
@@ -86,8 +133,13 @@ function App() {
     setCurrentTurn(1)
     setTimerRunning(false)
     setTimeLeft(timerDuration > 0 ? timerDuration : null)
+    setError(null)
+    setResult(null)
+    setIsLoading(false)
+    setLoadingMsgIndex(0)
   }
 
+  // Countdown timer effect for turns
   useEffect(() => {
     if (!timerRunning || timerDuration === 0 || timeLeft === null) return
 
@@ -96,15 +148,20 @@ function App() {
         if (currentTurn === 1) {
           if (!name1.trim()) setName1('Player 1')
           if (!code1.trim()) {
-            setCode1('// Time expired before writing any code!')
+            setCode1(TIME_EXPIRED_CODE)
           }
           setTimerRunning(false)
           setCurrentTurn(2)
           setTimeLeft(timerDuration)
         } else if (currentTurn === 2) {
-          if (!name2.trim()) setName2('Player 2')
+          const finalName1 = name1.trim() || 'Player 1'
+          let finalName2 = name2.trim() || 'Player 2'
+          if (normalizeName(finalName1) === normalizeName(finalName2)) {
+            finalName2 = `${finalName2} 2`
+          }
+          setName2(finalName2)
           if (!code2.trim()) {
-            setCode2('// Time expired before writing any code!')
+            setCode2(TIME_EXPIRED_CODE)
           }
           setTimerRunning(false)
           setCurrentTurn('ready')
@@ -127,23 +184,53 @@ function App() {
     code2,
   ])
 
+  // Rotating funny loading messages effect
+  useEffect(() => {
+    if (!isLoading) return
+
+    const intervalId = setInterval(() => {
+      setLoadingMsgIndex((prev) => (prev + 1) % LOADING_MESSAGES.length)
+    }, 1800)
+
+    return () => clearInterval(intervalId)
+  }, [isLoading])
+
   const isReadyToRoast =
     currentTurn === 'ready' &&
     name1.trim().length > 0 &&
     code1.trim().length > 0 &&
     name2.trim().length > 0 &&
-    code2.trim().length > 0
+    code2.trim().length > 0 &&
+    !hasDuplicateNames &&
+    !isLoading
 
-  const handleRoast = (e) => {
+  const handleRoast = async (e) => {
     e.preventDefault()
+    if (hasDuplicateNames) {
+      setError('name1 and name2 must be different.')
+      return
+    }
     if (!isReadyToRoast) return
 
-    console.log({
-      name1: name1.trim(),
-      code1,
-      name2: name2.trim(),
-      code2,
-    })
+    setIsLoading(true)
+    setLoadingMsgIndex(0)
+    setError(null)
+
+    try {
+      const roastResult = await roastCode({
+        name1: name1.trim(),
+        code1,
+        name2: name2.trim(),
+        code2,
+      })
+      setResult(roastResult)
+    } catch (err) {
+      setError(
+        err.message || 'Failed to generate the roast. Please try again.',
+      )
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const player1Status = currentTurn === 1 ? 'active' : 'locked'
@@ -159,74 +246,118 @@ function App() {
       </header>
 
       <main className="arena-main">
-        <MatchSettings
-          timerDuration={timerDuration}
-          onSelectDuration={handleSelectDuration}
-          currentTurn={currentTurn}
-          isMatchStarted={isMatchStarted}
-          onResetMatch={handleResetMatch}
-        />
-
-        <form className="roast-form" onSubmit={handleRoast}>
-          <div className="panels-grid">
-            <CodePanel
-              playerNumber={1}
-              status={player1Status}
-              name={name1}
-              onNameChange={handleName1Change}
-              code={code1}
-              onCodeChange={handleCode1Change}
-              onLockIn={handleLockPlayer1}
+        {result ? (
+          <ResultView
+            result={result}
+            name1={name1.trim()}
+            name2={name2.trim()}
+            onReset={handleResetMatch}
+          />
+        ) : (
+          <>
+            <MatchSettings
               timerDuration={timerDuration}
-              timeLeft={currentTurn === 1 ? timeLeft : null}
-              timerRunning={currentTurn === 1 && timerRunning}
-              namePlaceholder="Player 1"
-              codePlaceholder="Paste your code here..."
+              onSelectDuration={handleSelectDuration}
+              currentTurn={currentTurn}
+              isMatchStarted={isMatchStarted}
+              onResetMatch={handleResetMatch}
             />
 
-            <div className="vs-divider" aria-hidden="true">
-              <span
-                className={`vs-badge ${
-                  currentTurn === 'ready' ? 'vs-badge-ready' : ''
-                }`}
-              >
-                VS
-              </span>
-            </div>
+            {(error || hasDuplicateNames) && (
+              <div className="error-banner" role="alert">
+                <span className="error-icon" aria-hidden="true">
+                  ⚠️
+                </span>
+                <span className="error-text">
+                  {error ||
+                    'Developer names must be different (case-insensitive).'}
+                </span>
+                {error && (
+                  <button
+                    type="button"
+                    className="error-dismiss"
+                    onClick={() => setError(null)}
+                    aria-label="Dismiss error"
+                  >
+                    &times;
+                  </button>
+                )}
+              </div>
+            )}
 
-            <CodePanel
-              playerNumber={2}
-              status={player2Status}
-              name={name2}
-              onNameChange={handleName2Change}
-              code={code2}
-              onCodeChange={handleCode2Change}
-              onLockIn={handleLockPlayer2}
-              timerDuration={timerDuration}
-              timeLeft={currentTurn === 2 ? timeLeft : null}
-              timerRunning={currentTurn === 2 && timerRunning}
-              namePlaceholder="Player 2"
-              codePlaceholder="Paste your code here..."
-            />
-          </div>
+            <form className="roast-form" onSubmit={handleRoast}>
+              <div className="panels-grid">
+                <CodePanel
+                  playerNumber={1}
+                  status={player1Status}
+                  name={name1}
+                  onNameChange={handleName1Change}
+                  code={code1}
+                  onCodeChange={handleCode1Change}
+                  onLockIn={handleLockPlayer1}
+                  timerDuration={timerDuration}
+                  timeLeft={currentTurn === 1 ? timeLeft : null}
+                  timerRunning={currentTurn === 1 && timerRunning}
+                  namePlaceholder="Player 1"
+                  codePlaceholder="Paste your code here..."
+                />
 
-          <div className="action-area">
-            <button
-              type="submit"
-              className={`roast-button ${isReadyToRoast ? 'ready-pulse' : ''}`}
-              disabled={!isReadyToRoast}
-            >
-              {isReadyToRoast
-                ? "Roast 'em 🔥"
-                : currentTurn === 1
-                ? 'Waiting for Dev 1 to Lock In...'
-                : 'Waiting for Dev 2 to Lock In...'}
-            </button>
-            <p className="security-warning">
-              Don&apos;t paste secrets or API keys.
-            </p>
-          </div>
-        </form>
+                <div className="vs-divider" aria-hidden="true">
+                  <span
+                    className={`vs-badge ${
+                      currentTurn === 'ready' ? 'vs-badge-ready' : ''
+                    }`}
+                  >
+                    VS
+                  </span>
+                </div>
+
+                <CodePanel
+                  playerNumber={2}
+                  status={player2Status}
+                  name={name2}
+                  onNameChange={handleName2Change}
+                  code={code2}
+                  onCodeChange={handleCode2Change}
+                  onLockIn={handleLockPlayer2}
+                  timerDuration={timerDuration}
+                  timeLeft={currentTurn === 2 ? timeLeft : null}
+                  timerRunning={currentTurn === 2 && timerRunning}
+                  namePlaceholder="Player 2"
+                  codePlaceholder="Paste your code here..."
+                />
+              </div>
+
+              <div className="action-area">
+                <button
+                  type="submit"
+                  className={`roast-button ${
+                    isReadyToRoast ? 'ready-pulse' : ''
+                  } ${isLoading ? 'is-loading' : ''}`}
+                  disabled={!isReadyToRoast}
+                >
+                  {isLoading ? (
+                    <span className="loading-content">
+                      <span className="spinner" aria-hidden="true" />
+                      <span>{LOADING_MESSAGES[loadingMsgIndex]}</span>
+                    </span>
+                  ) : hasDuplicateNames ? (
+                    'Names Must Be Different ⚠️'
+                  ) : isReadyToRoast ? (
+                    "Roast 'em 🔥"
+                  ) : currentTurn === 1 ? (
+                    'Waiting for Dev 1 to Lock In...'
+                  ) : (
+                    'Waiting for Dev 2 to Lock In...'
+                  )}
+                </button>
+                <p className="security-warning">
+                  Don&apos;t paste secrets or API keys.
+                </p>
+              </div>
+            </form>
+          </>
+        )}
       </main>
     </div>
   )

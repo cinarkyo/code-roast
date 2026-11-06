@@ -161,6 +161,45 @@
   background: rgba(239, 68, 68, 0.12);
 }
 
+/* Error Banner */
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1.15rem;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  border-radius: 10px;
+  color: #fca5a5;
+  margin-bottom: 1.25rem;
+  font-size: 0.92rem;
+  font-weight: 500;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.12);
+}
+
+.error-icon {
+  font-size: 1.1rem;
+}
+
+.error-text {
+  flex: 1;
+}
+
+.error-dismiss {
+  background: transparent;
+  border: none;
+  color: #fca5a5;
+  font-size: 1.35rem;
+  cursor: pointer;
+  padding: 0 0.25rem;
+  line-height: 1;
+  opacity: 0.75;
+}
+
+.error-dismiss:hover {
+  opacity: 1;
+}
+
 /* Main Arena & Form */
 .arena-main {
   flex: 1;
@@ -711,6 +750,7 @@
   border: none;
   border-radius: 10px;
   padding: 0.9rem 2.75rem;
+  min-width: 320px;
   cursor: pointer;
   box-shadow: 0 8px 20px -4px var(--accent-glow);
   transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease;
@@ -744,6 +784,35 @@
   cursor: not-allowed;
   box-shadow: none;
   border: 1px solid var(--border-color);
+}
+
+.roast-button.is-loading {
+  color: var(--text-primary);
+  border-color: rgba(249, 115, 22, 0.45);
+  background: #171c28;
+}
+
+.loading-content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2.5px solid rgba(249, 115, 22, 0.25);
+  border-top-color: var(--accent-fire);
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .security-warning {
@@ -783,5 +852,6 @@
   .roast-button {
     width: 100%;
     max-width: 400px;
+    min-width: 0;
   }
 }
