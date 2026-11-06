@@ -17,7 +17,7 @@ export async function roastCode({ name1, code1, name2, code2 }) {
     throw new Error('Network error. Could not reach the roast server.')
   }
 
-  let data = null
+  let data
   try {
     data = await response.json()
   } catch {
@@ -25,9 +25,11 @@ export async function roastCode({ name1, code1, name2, code2 }) {
   }
 
   if (!response.ok) {
-    throw new Error(
+    const error = new Error(
       data?.error || `Request failed with status ${response.status}.`,
     )
+    error.status = response.status
+    throw error
   }
 
   return data

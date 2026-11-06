@@ -42,6 +42,11 @@ function App() {
   const [error, setError] = useState(null)
   const [result, setResult] = useState(null)
 
+  // Players whose panels reopened after a failed roast, in lock-in order
+  const [unlockedPlayers, setUnlockedPlayers] = useState([])
+  const isEditingAfterError = unlockedPlayers.length > 0
+  const visibleTurn = isEditingAfterError ? unlockedPlayers[0] : currentTurn
+
   const hasDuplicateNames =
     name1.trim().length > 0 &&
     name2.trim().length > 0 &&
@@ -60,7 +65,7 @@ function App() {
   }
 
   const startTimerIfNeeded = () => {
-    if (timerDuration > 0 && !timerRunning) {
+    if (!isEditingAfterError && timerDuration > 0 && !timerRunning) {
       setTimerRunning(true)
       if (timeLeft === null) {
         setTimeLeft(timerDuration)
@@ -71,7 +76,7 @@ function App() {
   const handleName1Change = (val) => {
     startTimerIfNeeded()
     setName1(val)
-    if (error) setError(null)
+    if (error && !isEditingAfterError) setError(null)
   }
 
   const handleCode1Change = (val) => {
@@ -82,7 +87,7 @@ function App() {
   const handleName2Change = (val) => {
     startTimerIfNeeded()
     setName2(val)
-    if (error) setError(null)
+    if (error && !isEditingAfterError) setError(null)
   }
 
   const handleCode2Change = (val) => {
@@ -90,7 +95,23 @@ function App() {
     setCode2(val)
   }
 
+  const handleRelockPlayer = (player) => {
+    if (hasDuplicateNames) {
+      setError('Developer names must be different. Please pick another name.')
+      return
+    }
+
+    const stillUnlocked = unlockedPlayers.filter((p) => p !== player)
+    setUnlockedPlayers(stillUnlocked)
+    if (stillUnlocked.length === 0) setError(null)
+  }
+
   const handleLockPlayer1 = () => {
+    if (isEditingAfterError) {
+      handleRelockPlayer(1)
+      return
+    }
+
     if (!name1.trim()) setName1('Player 1')
     if (!code1.trim()) {
       setCode1(TIME_EXPIRED_CODE)
@@ -101,6 +122,11 @@ function App() {
   }
 
   const handleLockPlayer2 = () => {
+    if (isEditingAfterError) {
+      handleRelockPlayer(2)
+      return
+    }
+
     const finalName1 = name1.trim() || 'Player 1'
     let finalName2 = name2.trim() || 'Player 2'
 
@@ -131,6 +157,7 @@ function App() {
     setName2('')
     setCode2('')
     setCurrentTurn(1)
+    setUnlockedPlayers([])
     setTimerRunning(false)
     setTimeLeft(timerDuration > 0 ? timerDuration : null)
     setError(null)
@@ -197,6 +224,7 @@ function App() {
 
   const isReadyToRoast =
     currentTurn === 'ready' &&
+    !isEditingAfterError &&
     name1.trim().length > 0 &&
     code1.trim().length > 0 &&
     name2.trim().length > 0 &&
@@ -228,14 +256,23 @@ function App() {
       setError(
         err.message || 'Failed to generate the roast. Please try again.',
       )
+      // A 400 means the input must change; other errors can be retried as is.
+      if (err.status === 400) setUnlockedPlayers([1, 2])
     } finally {
       setIsLoading(false)
     }
   }
 
-  const player1Status = currentTurn === 1 ? 'active' : 'locked'
-  const player2Status =
-    currentTurn === 1 ? 'waiting' : currentTurn === 2 ? 'active' : 'locked'
+  const getPlayer1Status = () => {
+    if (unlockedPlayers.includes(1)) return 'active'
+    return currentTurn === 1 ? 'active' : 'locked'
+  }
+
+  const getPlayer2Status = () => {
+    if (unlockedPlayers.includes(2)) return 'active'
+    if (currentTurn === 1) return 'waiting'
+    return currentTurn === 2 ? 'active' : 'locked'
+  }
 
   return (
     <div className="app-container">
@@ -258,7 +295,7 @@ function App() {
             <MatchSettings
               timerDuration={timerDuration}
               onSelectDuration={handleSelectDuration}
-              currentTurn={currentTurn}
+              currentTurn={visibleTurn}
               isMatchStarted={isMatchStarted}
               onResetMatch={handleResetMatch}
             />
@@ -289,7 +326,7 @@ function App() {
               <div className="panels-grid">
                 <CodePanel
                   playerNumber={1}
-                  status={player1Status}
+                  status={getPlayer1Status()}
                   name={name1}
                   onNameChange={handleName1Change}
                   code={code1}
@@ -305,7 +342,7 @@ function App() {
                 <div className="vs-divider" aria-hidden="true">
                   <span
                     className={`vs-badge ${
-                      currentTurn === 'ready' ? 'vs-badge-ready' : ''
+                      visibleTurn === 'ready' ? 'vs-badge-ready' : ''
                     }`}
                   >
                     VS
@@ -314,7 +351,7 @@ function App() {
 
                 <CodePanel
                   playerNumber={2}
-                  status={player2Status}
+                  status={getPlayer2Status()}
                   name={name2}
                   onNameChange={handleName2Change}
                   code={code2}
@@ -345,7 +382,7 @@ function App() {
                     'Names Must Be Different ⚠️'
                   ) : isReadyToRoast ? (
                     "Roast 'em 🔥"
-                  ) : currentTurn === 1 ? (
+                  ) : visibleTurn === 1 ? (
                     'Waiting for Dev 1 to Lock In...'
                   ) : (
                     'Waiting for Dev 2 to Lock In...'
