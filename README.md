@@ -4,7 +4,7 @@ Two developers lock in their code blind, an AI senior tech lead roasts both, and
 
 **[Live demo](https://code-roast-4zag.vercel.app)**
 
-> **Screenshot:** _add a screenshot of the app here._
+![Code Roast screenshot](docs/screenshot.png)
 
 ## How it works
 
@@ -23,7 +23,7 @@ Limits: names can be up to 30 characters, code up to 4000 characters, and the tw
 
 - **Frontend:** React + Vite (JavaScript)
 - **Backend:** Vercel serverless function (`api/roast.js`)
-- **AI:** Groq chat completions API with the `openai/gpt-oss-20b` model in JSON mode
+- **AI:** Groq chat completions API with the `openai/gpt-oss-120b` model in JSON mode
 
 ## Run locally
 
@@ -74,10 +74,8 @@ code-roast/
 │   ├── App.jsx               # Match flow and app state
 │   ├── App.css
 │   ├── index.css             # Global theme
-│   ├── main.jsx              # App entry point
-│   └── preview.jsx           # Mock data for preview.html
+│   └── main.jsx              # App entry point
 ├── index.html
-├── preview.html              # Local-only ResultView preview
 └── package.json
 ```
 
