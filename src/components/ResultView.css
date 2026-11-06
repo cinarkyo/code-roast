@@ -93,15 +93,20 @@
   color: var(--text-primary);
 }
 
-/* Reset button */
-.result-reset {
+/* Action buttons */
+.result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.result-reset,
+.result-copy {
   padding: 0.75rem 1.75rem;
   font-family: var(--font-mono);
   font-size: 1rem;
   font-weight: 700;
-  color: var(--bg-primary);
-  background-color: var(--accent-fire);
-  border: none;
   border-radius: 8px;
   cursor: pointer;
   transition:
@@ -109,12 +114,28 @@
     box-shadow 0.15s ease;
 }
 
-.result-reset:hover {
+.result-reset {
+  color: var(--bg-primary);
+  background-color: var(--accent-fire);
+  border: 1px solid var(--accent-fire);
+}
+
+/* The fixed width stops the layout from jumping when the label changes. */
+.result-copy {
+  min-width: 11rem;
+  color: var(--accent-fire);
+  background-color: transparent;
+  border: 1px solid var(--accent-fire);
+}
+
+.result-reset:hover,
+.result-copy:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 16px var(--accent-glow);
 }
 
-.result-reset:focus-visible {
+.result-reset:focus-visible,
+.result-copy:focus-visible {
   outline: 2px solid var(--text-primary);
   outline-offset: 2px;
 }
@@ -177,11 +198,13 @@
     animation: none;
   }
 
-  .result-reset {
+  .result-reset,
+  .result-copy {
     transition: none;
   }
 
-  .result-reset:hover {
+  .result-reset:hover,
+  .result-copy:hover {
     transform: none;
   }
 }
